@@ -15,8 +15,15 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+/**
+ * Handles all user interaction for tester.fxml.
+ */
 public class TesterController implements Initializable
 {
+    // Constants
+    private static final String FILENAME = "Your Test File Here";
+
+    // UI Components
     @FXML private Label lblQuestionNum;
     @FXML private Label lblQuestionContent;
     @FXML private Label lblResult;
@@ -27,23 +34,23 @@ public class TesterController implements Initializable
     @FXML private RadioButton radFourth;
     @FXML private Button btnSubmit;
 
-    private int questionNum = -1;
-    private boolean nextQuestion = false;
-    private boolean resetTest = false;
-    private JSONArray data;
-    private RadioButton[] radAnswers;
-    private long answerIndex;
-    private char answerLetter;
+    private int questionNum = -1;           // Current question number
+    private boolean nextQuestion = false;   // Goes to the next question on the test
+    private boolean resetTest = false;      // Restarts the test to the first question
+    private JSONArray testData;             // Stores the testData of all the questions
+    private RadioButton[] radAnswers;       // Stores the list of radio buttons
+    private long answerIndex;               // Index of the current answer
+    private char answerLetter;              // Letter of the current answer
 
     @Override
     public void initialize(URL location, ResourceBundle resources)
     {
         radAnswers = new RadioButton[]{ radFirst, radSecond, radThird, radFourth };
 
-        Object obj = null;
+        Object jsonObject = null;
 
         try {
-            obj = new JSONParser().parse(new FileReader("cot3541_midterm.hms"));
+            jsonObject = new JSONParser().parse(new FileReader(FILENAME));
         }
 
         catch (ParseException e) {
@@ -54,58 +61,71 @@ public class TesterController implements Initializable
             e.printStackTrace();
         }
 
-        data = (JSONArray) obj;
+        testData = (JSONArray) jsonObject;
 
         nextQuestion();
 
-        btnSubmit.setOnAction(event ->
-        {
-            if (getAnswersSelected() == null)
-                return;
-
-            else if (resetTest)
-            {
-                questionNum = 0;
-                reset();
-            }
-
-            else if (!nextQuestion)
-            {
-                btnSubmit.setText("Next Question");
-                nextQuestion = true;
-
-                boolean correctAnswer = false;
-
-                for (int i = 0; i < radAnswers.length && correctAnswer == false; i++) {
-                    if (radAnswers[i].isSelected() && i == answerIndex)
-                        correctAnswer = true;
-                }
-
-                lblResult.setVisible(true);
-
-                if (!correctAnswer)
-                {
-                    lblResult.setText("Wrong!");
-
-                    lblAnswer.setVisible(true);
-                    lblAnswer.setText("Correct Answer: " + answerLetter);
-                } else
-                    lblResult.setText("Correct!");
-
-                if (questionNum >= data.size() - 1)
-                {
-                    btnSubmit.setText("Restart");
-                    resetTest = true;
-                }
-
-                setAnswersDisable(true);
-            }
-
-            else
-                nextQuestion();
+        btnSubmit.setOnAction(event -> {
+            submit();
         });
     }
 
+    /**
+     * Checks if the currently selected answer is correct and updates the UI accordingly.
+     */
+    private void submit()
+    {
+        if (getAnswersSelected() == null)
+            return;
+
+        else if (resetTest)
+        {
+            questionNum = 0;
+            reset();
+        }
+
+        else if (!nextQuestion)
+        {
+            btnSubmit.setText("Next Question");
+            nextQuestion = true;
+
+            boolean correctAnswer = false;
+
+            for (int i = 0; i < radAnswers.length && correctAnswer == false; i++)
+            {
+                if (radAnswers[i].isSelected() && i == answerIndex)
+                    correctAnswer = true;
+            }
+
+            lblResult.setVisible(true);
+
+            if (!correctAnswer)
+            {
+                lblResult.setText("Wrong!");
+
+                lblAnswer.setVisible(true);
+                lblAnswer.setText("Correct Answer: " + answerLetter);
+            }
+
+            else
+                lblResult.setText("Correct!");
+
+            if (questionNum >= testData.size() - 1)
+            {
+                btnSubmit.setText("Restart");
+                resetTest = true;
+            }
+
+            setAnswersDisable(true);
+        }
+
+        else
+            nextQuestion();
+    }
+
+    /**
+     * Displays the next question on the test.
+     */
     private void nextQuestion()
     {
         questionNum++;
@@ -113,14 +133,17 @@ public class TesterController implements Initializable
         reset();
     }
 
+    /**
+     * Loads the current question and resets the UI states.
+     */
     private void reset()
     {
-        if (questionNum >= data.size())
+        if (questionNum >= testData.size())
             btnSubmit.setDisable(true);
 
         else
         {
-            JSONObject questionData = (JSONObject) data.get(questionNum);
+            JSONObject questionData = (JSONObject) testData.get(questionNum);
             String question = (String) questionData.get("question");
             JSONArray answers = (JSONArray) questionData.get("answers");
 
@@ -156,18 +179,30 @@ public class TesterController implements Initializable
         resetTest = false;
     }
 
+    /**
+     * Sets the disable state for all radio buttons in the list.
+     * @param value The value of the disable state.
+     */
     private void setAnswersDisable(boolean value)
     {
         for (RadioButton button : radAnswers)
             button.setDisable(value);
     }
 
+    /**
+     * Sets the selected state for all radio buttons in the list.
+     * @param value The value of the selected state.
+     */
     private void setAnswersSelected(boolean value)
     {
         for (RadioButton button : radAnswers)
             button.setSelected(value);
     }
 
+    /**
+     * Gets the currently selected radio button in the list.
+     * @return The currently selected radio button or null of none are selected.
+     */
     private RadioButton getAnswersSelected()
     {
         for (RadioButton button : radAnswers)
